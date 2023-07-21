@@ -19,39 +19,23 @@
  ********************************************************************************/
 package org.eclipse.tractusx.semantics.hub.persistence.triplestore;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.jena.query.ParameterizedSparqlString;
+import org.apache.jena.query.Query;
+import org.apache.jena.rdf.model.Property;
+import org.apache.jena.rdf.model.RDFNode;
+import org.apache.jena.rdf.model.ResourceFactory;
+import org.apache.jena.update.UpdateRequest;
+import org.eclipse.esmf.aspectmodel.urn.AspectModelUrn;
 import org.eclipse.tractusx.semantics.hub.domain.ModelPackageStatus;
 import org.eclipse.tractusx.semantics.hub.domain.ModelPackageUrn;
 
-import com.google.common.collect.Lists;
-
-import ch.qos.logback.core.pattern.LiteralConverter;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.stream.Collectors;
-
-import org.apache.commons.lang3.StringUtils;
-import org.apache.jena.datatypes.BaseDatatype;
-import org.apache.jena.datatypes.RDFDatatype;
-import org.apache.jena.datatypes.xsd.impl.XSDPlainType;
-import org.apache.jena.graph.impl.AdhocDatatype;
-import org.apache.jena.query.ParameterizedSparqlString;
-import org.apache.jena.query.Query;
-import org.apache.jena.query.QuerySolutionMap;
-import org.apache.jena.rdf.model.Literal;
-import org.apache.jena.rdf.model.Property;
-import org.apache.jena.rdf.model.RDFList;
-import org.apache.jena.rdf.model.RDFNode;
-import org.apache.jena.rdf.model.ResourceFactory;
-import org.apache.jena.rdf.model.impl.RDFListImpl;
-import org.apache.jena.reasoner.rulesys.FunctorDatatype;
-import org.apache.jena.update.UpdateRequest;
-
-import org.eclipse.esmf.aspectmodel.urn.AspectModelUrn;
-
 public class SparqlQueries {
    private static final String AUXILIARY_NAMESPACE = "urn:samm:org.eclipse.esmf.samm:aspect-model:aux#";
+   private static final String AUXILIARY_NAMESPACE_BAMM = "urn:bamm:io.openmanufacturing:aspect-model:aux#";
 
    private static final String NAME_TYPE_NAME = "_NAME_";
    private static final String NAME_TYPE_DESCRIPTION = "_DESCRIPTION_";
@@ -286,8 +270,30 @@ public class SparqlQueries {
       return pss.asQuery();
    }
 
+   public static Query buildFindAllQueryForBAMM( String namespaceFilter, ModelPackageStatus status,
+         int page, int pageSize ) {
+
+      final ParameterizedSparqlString pss = buildMinimalQueryForBAMM(FIND_ALL_MINIMAL_QUERY, namespaceFilter, status);
+      pss.setLiteral( "$limitParam", pageSize );
+      pss.setLiteral( "$offsetParam", getOffset( page, pageSize ) );
+      return pss.asQuery();
+   }
+
    private static ParameterizedSparqlString buildMinimalQuery(String query, String namespaceFilter, ModelPackageStatus status){
       final ParameterizedSparqlString pss = create( query );
+      pss.setLiteral( "$bammAspectUrnRegexParam", SAMM_ASPECT_URN_REGEX );
+      if ( StringUtils.isNotBlank( namespaceFilter ) ) {
+         pss.setLiteral( "$namespaceFilterParam", namespaceFilter );
+      }
+
+      if ( status != null ) {
+         pss.setLiteral( "$statusFilterParam", status.name() );
+      }
+      return pss;
+   }
+
+   private static ParameterizedSparqlString buildMinimalQueryForBAMM(String query, String namespaceFilter, ModelPackageStatus status){
+      final ParameterizedSparqlString pss = createBAMM( query );
       pss.setLiteral( "$bammAspectUrnRegexParam", SAMM_ASPECT_URN_REGEX );
       if ( StringUtils.isNotBlank( namespaceFilter ) ) {
          pss.setLiteral( "$namespaceFilterParam", namespaceFilter );
@@ -355,6 +361,13 @@ public class SparqlQueries {
       final ParameterizedSparqlString pss = new ParameterizedSparqlString();
       pss.setCommandText( query );
       pss.setNsPrefix( "aux", AUXILIARY_NAMESPACE );
+      return pss;
+   }
+
+   private static ParameterizedSparqlString createBAMM( final String query ) {
+      final ParameterizedSparqlString pss = new ParameterizedSparqlString();
+      pss.setCommandText( query );
+      pss.setNsPrefix( "aux", AUXILIARY_NAMESPACE_BAMM );
       return pss;
    }
 }

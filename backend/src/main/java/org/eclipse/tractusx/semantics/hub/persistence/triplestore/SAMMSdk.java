@@ -50,6 +50,7 @@ import org.eclipse.esmf.aspectmodel.resolver.services.VersionedModel;
 import org.eclipse.esmf.aspectmodel.shacl.violation.Violation;
 import org.eclipse.esmf.aspectmodel.urn.AspectModelUrn;
 import org.eclipse.esmf.aspectmodel.validation.services.AspectModelValidator;
+import org.eclipse.esmf.aspectmodel.versionupdate.migrator.BammUriRewriter;
 import org.eclipse.tractusx.semantics.hub.InvalidAspectModelException;
 
 import io.vavr.control.Try;
@@ -74,15 +75,11 @@ public class SAMMSdk {
       final ResolutionStrategy resolutionStrategy =
             new SAMMSdk.TripleStoreResolutionStrategy( tripleStoreRequester );
 
-      final VersionNumber knownVersion = getKnownVersion( model );
-      final Try<VersionedModel> versionedModel = aspectMetaModelResourceResolver.mergeMetaModelIntoRawModel( model, knownVersion );
       final ResolutionStrategy firstPayloadThenTripleStore = new EitherStrategy(
-            new SelfResolutionStrategy( versionedModel.get().getRawModel() ),
+            new SelfResolutionStrategy( model),
             resolutionStrategy );
 
-      final AspectModelUrn modelUrn = getAspectUrn( model );
-      final Try<VersionedModel> resolvedModel = versionedModel.flatMap( loadedModel ->
-            aspectModelResolver.resolveAspectModel( firstPayloadThenTripleStore, modelUrn ) );
+      Try<VersionedModel> resolvedModel = aspectModelResolver.resolveAspectModel( firstPayloadThenTripleStore, model );
 
       if ( resolvedModel.isFailure() ) {
          throw new InvalidAspectModelException( resolvedModel.getCause().getMessage() );
@@ -134,18 +131,20 @@ public class SAMMSdk {
 
       @Override
       public Try<Model> apply( final AspectModelUrn aspectModelUrn ) {
+
          final String namespace = aspectModelUrn.getNamespace();
+
          if ( alreadyLoadedNamespaces.contains( namespace ) ) {
             return Try.success( ModelFactory.createDefaultModel() );
          }
          alreadyLoadedNamespaces.add( namespace );
 
-         final Resource resource = ResourceFactory.createResource( aspectModelUrn.getUrn().toASCIIString() );
          final Model model = tripleStoreRequester.apply( aspectModelUrn.getUrn().toString() );
+         final Resource resource =model.createResource(aspectModelUrn.getUrn().toASCIIString());
          if ( model == null ) {
             return Try.failure( new ResourceDefinitionNotFoundException( getClass().getSimpleName(), resource ) );
          }
-         return model.contains( resource, RDF.type, (RDFNode) null ) ?
+         return AspectModelResolver.containsDefinition( model,aspectModelUrn ) ?
                Try.success( model ) :
                Try.failure( new ResourceDefinitionNotFoundException( getClass().getSimpleName(), resource ) );
       }
@@ -161,8 +160,8 @@ public class SAMMSdk {
 
       @Override
       public Try<Model> apply( final AspectModelUrn aspectModelUrn ) {
-         final Resource resource = ResourceFactory.createResource( aspectModelUrn.getUrn().toString() );
-         return model.contains( resource, RDF.type, (RDFNode) null ) ?
+         final Resource resource = model.createResource("aspectModelUrn.getUrn().toASCIIString()");
+         return AspectModelResolver.containsDefinition( model,aspectModelUrn ) ?
                Try.success( model ) :
                Try.failure( new ResourceDefinitionNotFoundException( getClass().getSimpleName(), resource ) );
       }

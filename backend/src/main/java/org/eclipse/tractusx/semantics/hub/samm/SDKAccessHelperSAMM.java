@@ -21,6 +21,7 @@ package org.eclipse.tractusx.semantics.hub.samm;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -197,6 +198,11 @@ public class SDKAccessHelperSAMM {
    }
 
    public Try<VersionedModel> loadSammModel( String ttl ) {
+      if ( ttl.contains( "bamm" ) ) {
+         ttl = ttl.replaceAll( "bamm", "samm" )
+               .replaceAll( "io.openmanufacturing", "org.eclipse.esmf.samm" );
+      }
+
       InputStream targetStream = new ByteArrayInputStream( ttl.getBytes() );
       Try<Model> model = TurtleLoader.loadTurtle( targetStream );
 

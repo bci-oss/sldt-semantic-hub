@@ -28,6 +28,7 @@ import java.util.Set;
 import java.util.Spliterators;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import org.apache.jena.rdf.model.Model;
@@ -52,6 +53,7 @@ import org.eclipse.esmf.aspectmodel.urn.AspectModelUrn;
 import org.eclipse.esmf.aspectmodel.urn.ElementType;
 import org.eclipse.esmf.aspectmodel.validation.services.AspectModelValidator;
 import org.eclipse.tractusx.semantics.hub.InvalidAspectModelException;
+import org.eclipse.tractusx.semantics.hub.model.SemanticModelType;
 
 import io.vavr.control.Try;
 
@@ -71,15 +73,15 @@ public class SAMMSdk {
       aspectModelValidator = new AspectModelValidator();
    }
 
-   public void validate( final Model model, final Function<String, Model> tripleStoreRequester ) {
+   public void validate( final Model model, final Function<String, Model> tripleStoreRequester, SemanticModelType type ) {
+      boolean isBamm=type.equals( SemanticModelType.BAMM );
       final ResolutionStrategy resolutionStrategy =
-            new SAMMSdk.TripleStoreResolutionStrategy( tripleStoreRequester );
+            new SAMMSdk.TripleStoreResolutionStrategy( tripleStoreRequester,isBamm );
 
       final Try<VersionedModel> resolvedModel = new AspectModelResolver().resolveAspectModel( resolutionStrategy, model );
-
       final List<Violation> violations = aspectModelValidator.validateModel( resolvedModel );
       if ( !violations.isEmpty() ) {
-         final Map<String, String> detailsMap = violations.stream().collect( Collectors.toMap( Violation::errorCode, Violation::message ) );
+         final Map<String, String> detailsMap = violations.stream().collect( Collectors.toMap( Violation::message, Violation::errorCode ) );
          throw new InvalidAspectModelException( detailsMap );
       }
    }
@@ -117,27 +119,40 @@ public class SAMMSdk {
 
       private final Function<String, Model> tripleStoreRequester;
       private final List<String> alreadyLoadedNamespaces = new ArrayList<>();
+      private final boolean isBamm;
 
-      public TripleStoreResolutionStrategy( final Function<String, Model> tripleStoreRequester ) {
+      public TripleStoreResolutionStrategy( final Function<String, Model> tripleStoreRequester, final boolean isBamm ) {
          this.tripleStoreRequester = tripleStoreRequester;
+         this.isBamm=isBamm;
       }
 
       @Override
       public Try<Model> apply( final AspectModelUrn aspectModelUrn ) {
-         final String namespace = aspectModelUrn.getNamespace();
+         String namespace = aspectModelUrn.getNamespace();
+         Resource resource = ResourceFactory.createResource( aspectModelUrn.getUrn().toASCIIString());
+         Model model = tripleStoreRequester.apply(aspectModelUrn.getUrn().toString());
+         if(isBamm) {
+             namespace = replaceSammToBamm(aspectModelUrn.getNamespace());
+             resource = ResourceFactory.createResource( replaceSammToBamm(aspectModelUrn.getUrn().toASCIIString()));
+             model = tripleStoreRequester.apply( replaceSammToBamm(aspectModelUrn.getUrn().toString()) );
+         }
+
          if ( alreadyLoadedNamespaces.contains( namespace ) ) {
-            return Try.success( ModelFactory.createDefaultModel() );
+            //return Try.success( ModelFactory.createDefaultModel() );
          }
          alreadyLoadedNamespaces.add( namespace );
 
-         final Resource resource = ResourceFactory.createResource( aspectModelUrn.getUrn().toASCIIString() );
-         final Model model = tripleStoreRequester.apply( aspectModelUrn.getUrn().toString() );
          if ( model == null ) {
             return Try.failure( new ResourceDefinitionNotFoundException( getClass().getSimpleName(), resource ) );
          }
          return model.contains( resource, RDF.type, (RDFNode) null ) ?
                Try.success( model ) :
                Try.failure( new ResourceDefinitionNotFoundException( getClass().getSimpleName(), resource ) );
+      }
+
+      private String replaceSammToBamm(String value){
+         return value.replaceAll( "samm", "bamm" )
+               .replaceAll(  "org.eclipse.esmf.samm","io.openmanufacturing" );
       }
    }
 

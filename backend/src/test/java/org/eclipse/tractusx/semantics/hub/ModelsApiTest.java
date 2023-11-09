@@ -515,7 +515,7 @@ public class ModelsApiTest extends AbstractModelsApiTest{
    public void testSaveValidModelExpectSuccessForBAMM() throws Exception {
       String urnPrefix = "urn:bamm:org.eclipse.tractusx.valid.save:2.0.0#";
       mvc.perform(
-                  post( TestUtils.createValidModelRequestBAMM(urnPrefix),"RELEASED")
+                  post( TestUtils.createValidModelRequestBAMM(urnPrefix),"RELEASED", "BAMM")
             )
             .andDo( MockMvcResultHandlers.print() )
             .andExpect( jsonPath( "$.urn", is( toMovementUrn(urnPrefix) ) ) )
@@ -541,7 +541,7 @@ public class ModelsApiTest extends AbstractModelsApiTest{
    public void testGenerateJsonSchemaExpectSuccessForBAMM() throws Exception {
       String urnPrefix = "urn:bamm:org.eclipse.tractusx.model.status.transition:2.0.0#";
       mvc.perform(
-                  post( TestUtils.createValidModelRequestBAMM(urnPrefix),"RELEASED")
+                  post( TestUtils.createValidModelRequestBAMM(urnPrefix),"RELEASED", "BAMM")
             )
             .andDo( MockMvcResultHandlers.print() )
             .andExpect( status().isOk() );
@@ -619,7 +619,7 @@ public class ModelsApiTest extends AbstractModelsApiTest{
    @Test
    public void testExampleGenerateExamplePayloadJsonExpectSuccessForBAMM() throws Exception {
       String urnPrefix = "urn:bamm:org.eclipse.tractusx.testjsonschema:2.0.0#";
-      mvc.perform(post( TestUtils.createValidModelRequestBAMM(urnPrefix),"DRAFT")
+      mvc.perform(post( TestUtils.createValidModelRequestBAMM(urnPrefix),"DRAFT", "BAMM")
                   .with(jwtTokenFactory.allRoles()))
             .andDo( MockMvcResultHandlers.print() )
             .andExpect( status().isOk() );
@@ -647,22 +647,22 @@ public class ModelsApiTest extends AbstractModelsApiTest{
       // this will fail because traceability does not exist yet
       String modelWithReferenceToTraceability = TestUtils.loadModelFromResources(
             TestUtils.MODEL_WITH_REFERENCE_TO_TRACEABILITY_MODEL_PATH_FOR_BAMM );
-      mvc.perform( post( modelWithReferenceToTraceability,"DRAFT" ) )
+      mvc.perform( post( modelWithReferenceToTraceability,"DRAFT", "BAMM" ) )
             .andDo( MockMvcResultHandlers.print() )
             .andExpect( status().isBadRequest() )
             .andExpect( jsonPath( "$.error.message", is( "Validation failed." ) ) )
-            .andExpect( jsonPath( "$.error.details.validationError",
+            .andExpect( jsonPath( "$.error.details.ERR_PROCESSING",
                   containsString( "urn:bamm:org.eclipse.tractusx.traceability:0.1.1#PartDataCharacteristic" ) ) );
 
       // save the traceability aspect model
       String traceabilityModel = TestUtils.loadModelFromResources(
             TestUtils.TRACEABILITY_MODEL_PATH_FOR_BAMM );
-      mvc.perform( post( traceabilityModel, "DRAFT" ) )
+      mvc.perform( post( traceabilityModel, "DRAFT", "BAMM" ) )
             .andDo( MockMvcResultHandlers.print() )
             .andExpect( status().isOk() );
 
       // save again the model with external reference and validate the result
-      mvc.perform( post(modelWithReferenceToTraceability, "DRAFT" ) )
+      mvc.perform( post(modelWithReferenceToTraceability, "DRAFT", "BAMM" ) )
             .andDo( MockMvcResultHandlers.print() )
             .andExpect( status().isOk() );
 
@@ -838,7 +838,7 @@ public class ModelsApiTest extends AbstractModelsApiTest{
 
       for(int i = 1; i <= 11; i++) {
          String urnPrefix = String.format(urnPrefixPattern, i);
-         mvc.perform(post( TestUtils.createValidModelRequestBAMM(urnPrefix),"DRAFT") )
+         mvc.perform(post( TestUtils.createValidModelRequestBAMM(urnPrefix),"DRAFT", "BAMM") )
                .andDo( MockMvcResultHandlers.print() )
                .andExpect( status().isOk() );
 
@@ -900,20 +900,20 @@ public class ModelsApiTest extends AbstractModelsApiTest{
       String DIGITAL_PRODUCT_PASSPORT_FILE = "DigitalProductPassport-bamm.ttl";
 
       //Given
-      mvc.perform( post( TestUtils.getTTLFile( PCF_FILE ), "DRAFT" ) )
+      mvc.perform( post( TestUtils.getTTLFile( PCF_FILE ), "DRAFT", "BAMM") )
             .andDo( MockMvcResultHandlers.print() )
             .andExpect( status().isOk() );
 
-      mvc.perform( post( TestUtils.getTTLFile( SERIAL_PART_FILE ), "DRAFT" ) )
+      mvc.perform( post( TestUtils.getTTLFile( SERIAL_PART_FILE ), "DRAFT", "BAMM" ) )
             .andDo( MockMvcResultHandlers.print() )
             .andExpect( status().isOk() );
 
-      mvc.perform( post( TestUtils.getTTLFile( PHYSICAL_DIMENSIONS_FILE ), "DRAFT" ) )
+      mvc.perform( post( TestUtils.getTTLFile( PHYSICAL_DIMENSIONS_FILE ), "DRAFT", "BAMM" ) )
             .andDo( MockMvcResultHandlers.print() )
             .andExpect( status().isOk() );
 
       //When
-      mvc.perform( post( TestUtils.getTTLFile( DIGITAL_PRODUCT_PASSPORT_FILE ), "DRAFT" ) )
+      mvc.perform( post( TestUtils.getTTLFile( DIGITAL_PRODUCT_PASSPORT_FILE ), "DRAFT","BAMM" ) )
             .andDo( MockMvcResultHandlers.print() )
             .andExpect( status().isOk() );
    }

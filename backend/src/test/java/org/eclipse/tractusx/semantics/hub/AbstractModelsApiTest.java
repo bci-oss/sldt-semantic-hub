@@ -56,14 +56,18 @@ public abstract class AbstractModelsApiTest extends FusekiTestContainer {
     }
 
     public MockHttpServletRequestBuilder post( String payload, String status ) {
-        String type = "SAMM";
+          return post(payload,status,"SAMM");
+    }
+
+    public MockHttpServletRequestBuilder post( String payload, String status, String type ) {
         return MockMvcRequestBuilders.post( "/api/v1/models")
-                .queryParam("type", type)
-                .queryParam( "status", status)
-                .accept( MediaType.APPLICATION_JSON )
-                .contentType( MediaType.TEXT_PLAIN)
-                .content( payload )
-                .with(jwtTokenFactory.allRoles());
+              .queryParam("type", type)
+              .queryParam( "status", status)
+              .accept( MediaType.APPLICATION_JSON )
+              .contentType( MediaType.TEXT_PLAIN)
+              .content( payload )
+              .with(jwtTokenFactory.allRoles());
+
     }
 
     public MockHttpServletRequestBuilder put( String payload, String status ) {

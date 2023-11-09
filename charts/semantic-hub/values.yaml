@@ -20,7 +20,7 @@
 
 
 # enables the default keycloak identity provider
-enableKeycloak: true
+enableKeycloak: false
 
 hub:
   image:
@@ -69,7 +69,7 @@ hub:
 
 graphdb:
   ## Include Fuski deployment or deploy separately
-  enabled: false
+  enabled: true
   image: jena-fuseki-docker:4.7.0
   imagePullPolicy: IfNotPresent
   replicaCount: 1
@@ -80,7 +80,6 @@ graphdb:
   password: admin
   javaOptions: "-Xmx1048m -Xms1048m"
   args: ["--tdb2", "--update", "--loc", "databases/", "/ds"]
-  storageClassName: default
   storageSize: 50Gi
   pvcAccessModes:
     - ReadWriteOnce

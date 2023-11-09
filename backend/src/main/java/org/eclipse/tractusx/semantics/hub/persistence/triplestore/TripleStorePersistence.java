@@ -150,14 +150,22 @@ public class TripleStorePersistence implements PersistenceLayer {
          }
       }
 
-      sdsSdk.validate( rdfModel, this::findContainingModelByUrn );
+      sdsSdk.validate( rdfModel, this::findContainingModelByUrn, type );
 
       final Resource rootResource = ResourceFactory.createResource( modelUrn.getUrnPrefix() );
-      rdfModel.add( rootResource, SparqlQueries.STATUS_PROPERTY,
+
+      Model modelToSave=null;
+      if(type.equals( SemanticModelType.BAMM )){
+         modelToSave = sdsSdk.load( newModel.getBytes( StandardCharsets.UTF_8 ) );
+      } else {
+         modelToSave= rdfModel;
+      }
+
+      modelToSave.add( rootResource, SparqlQueries.STATUS_PROPERTY,
             ModelPackageStatus.valueOf( status.name() ).toString() );
 
       try ( final RDFConnection rdfConnection = rdfConnectionRemoteBuilder.build() ) {
-         rdfConnection.update( new UpdateBuilder().addInsert( rdfModel ).build() );
+         rdfConnection.update( new UpdateBuilder().addInsert( modelToSave ).build() );
       }
       return findByUrn( modelUrn );
    }
